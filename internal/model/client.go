@@ -89,6 +89,7 @@ func ConfigFromSpec(spec *v1alpha1.ModelSpec) Config {
 		Atespace:   DefaultAtespace,
 		Provider:   spec.Provider,
 		Model:      spec.Model,
+		BaseURL:    spec.GetBaseUrl(),
 		Parameters: spec.GetParameters().AsMap(),
 		SecretKey:  secKey,
 	}
@@ -444,6 +445,7 @@ func (c *Client) Spec() *v1alpha1.ModelSpec {
 	spec := &v1alpha1.ModelSpec{
 		Provider:  c.cfg.Provider,
 		Model:     c.cfg.Model,
+		BaseUrl:   c.cfg.BaseURL,
 		SecretKey: c.cfg.SecretKey,
 	}
 	if len(c.cfg.Parameters) > 0 {

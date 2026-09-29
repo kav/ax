@@ -96,6 +96,18 @@ func TestClient_FromConfig(t *testing.T) {
 	}
 }
 
+func TestConfigFromSpec_BaseURL(t *testing.T) {
+	spec := &v1alpha1.ModelSpec{Provider: "openai", Model: "qwen3", BaseUrl: "https://models.example/v1"}
+	cfg := model.ConfigFromSpec(spec)
+	if cfg.BaseURL != "https://models.example/v1" {
+		t.Fatalf("BaseURL = %q, want %q", cfg.BaseURL, "https://models.example/v1")
+	}
+	got := model.NewClient(cfg, model.WithSecretResolver(func(string, string) (string, error) { return "", nil })).Spec().GetBaseUrl()
+	if got != "https://models.example/v1" {
+		t.Errorf("Spec().GetBaseUrl() = %q, want %q", got, "https://models.example/v1")
+	}
+}
+
 func TestClient_FromCRD(t *testing.T) {
 	crd := &v1alpha1.Model{
 		Metadata: &v1alpha1.ObjectMeta{

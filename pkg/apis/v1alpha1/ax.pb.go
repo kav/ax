@@ -1399,6 +1399,7 @@ type ModelSpec struct {
 	// parameters are provider-specific generation settings passed through to the
 	// model API as-is, for example temperature or maxOutputTokens for Gemini.
 	Parameters    *structpb.Struct `protobuf:"bytes,7,opt,name=parameters,proto3" json:"parameters,omitempty"`
+	BaseUrl       string           `protobuf:"bytes,8,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1459,6 +1460,13 @@ func (x *ModelSpec) GetParameters() *structpb.Struct {
 		return x.Parameters
 	}
 	return nil
+}
+
+func (x *ModelSpec) GetBaseUrl() string {
+	if x != nil {
+		return x.BaseUrl
+	}
+	return ""
 }
 
 type SecretKeyRef struct {
@@ -2669,7 +2677,7 @@ const file_pkg_apis_v1alpha1_ax_proto_rawDesc = "" +
 	"apiVersion\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x123\n" +
 	"\bmetadata\x18\x03 \x01(\v2\x17.ax.v1alpha1.ObjectMetaR\bmetadata\x12*\n" +
-	"\x04spec\x18\x04 \x01(\v2\x16.ax.v1alpha1.ModelSpecR\x04spec\"\xef\x01\n" +
+	"\x04spec\x18\x04 \x01(\v2\x16.ax.v1alpha1.ModelSpecR\x04spec\"\x8a\x02\n" +
 	"\tModelSpec\x12\x1a\n" +
 	"\bprovider\x18\x01 \x01(\tR\bprovider\x12\x14\n" +
 	"\x05model\x18\x02 \x01(\tR\x05model\x128\n" +
@@ -2677,7 +2685,8 @@ const file_pkg_apis_v1alpha1_ax_proto_rawDesc = "" +
 	"secret_key\x18\x06 \x01(\v2\x19.ax.v1alpha1.SecretKeyRefR\tsecretKey\x127\n" +
 	"\n" +
 	"parameters\x18\a \x01(\v2\x17.google.protobuf.StructR\n" +
-	"parametersJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\vtemperatureR\n" +
+	"parameters\x12\x19\n" +
+	"\bbase_url\x18\b \x01(\tR\abaseUrlJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\vtemperatureR\n" +
 	"max_tokensR\x12system_instruction\"4\n" +
 	"\fSecretKeyRef\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n" +

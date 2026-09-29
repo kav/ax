@@ -327,6 +327,34 @@ func TestModel_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestModel_BaseURLYAMLRoundTrip(t *testing.T) {
+	manifest := `
+apiVersion: ax.io/v1alpha1
+kind: Model
+metadata:
+  name: synthetic-model
+  atespace: default
+spec:
+  provider: openai
+  model: qwen3
+  baseUrl: https://models.example/v1
+  secretKey:
+    name: synthetic-api-secret
+    key: OPENAI_API_KEY
+`
+	var model v1alpha1.Model
+	if err := yaml.Unmarshal([]byte(manifest), &model); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	out, err := yaml.Marshal(&model)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(out), "baseUrl: https://models.example/v1") {
+		t.Errorf("expected baseUrl in YAML output:\n%s", out)
+	}
+}
+
 func mustStruct(t *testing.T, m map[string]any) *structpb.Struct {
 	t.Helper()
 	s, err := structpb.NewStruct(m)
