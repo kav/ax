@@ -17,6 +17,8 @@ package model_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -189,6 +191,104 @@ func TestClient_GeminiHTTP(t *testing.T) {
 	if resp.Usage.TotalTokens != 30 {
 		t.Errorf("expected 30 total tokens, got %d", resp.Usage.TotalTokens)
 	}
+}
+
+func TestClient_OpenAIChatCompletionsHTTP(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/v1/chat/completions" {
+			t.Errorf("request = %s %s, want POST /v1/chat/completions", r.Method, r.URL.Path)
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
+			t.Errorf("Authorization = %q, want %q", got, "Bearer test-key")
+		}
+		var body struct {
+			Model    string `json:"model"`
+			Messages []struct {
+				Role    string `json:"role"`
+				Content string `json:"content"`
+			} `json:"messages"`
+			TopP        float64 `json:"top_p"`
+			Temperature float64 `json:"temperature"`
+			MaxTokens   int     `json:"max_tokens"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("decode request: %v", err)
+		}
+		if body.Model != "qwen3" || len(body.Messages) != 2 || body.Messages[0].Role != "system" || body.Messages[0].Content != "Be concise" || body.Messages[1].Role != "user" || body.Messages[1].Content != "Plan a Go workspace" || body.TopP != 0.8 || body.Temperature != 0.2 || body.MaxTokens != 64 {
+			t.Errorf("unexpected request body: %+v", body)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"Use Go modules."}}],"usage":{"prompt_tokens":12,"completion_tokens":4,"total_tokens":16}}`))
+	}))
+	defer ts.Close()
+
+	client := model.NewClient(model.Config{Provider: "openai", Model: "qwen3", BaseURL: ts.URL + "/v1", APIKey: "test-key", Parameters: map[string]any{"top_p": 0.8, "systemInstruction": "Be concise"}}, model.WithHTTPClient(ts.Client()))
+	resp, err := client.Generate(context.Background(), &model.GenerateRequest{Prompt: "Plan a Go workspace", Temperature: 0.2, MaxTokens: 64})
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+	if resp.Content != "Use Go modules." {
+		t.Errorf("Content = %q", resp.Content)
+	}
+	if resp.Usage.PromptTokens != 12 || resp.Usage.CompletionTokens != 4 || resp.Usage.TotalTokens != 16 {
+		t.Errorf("Usage = %+v", resp.Usage)
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestClient_OpenAIDefaultBaseURL(t *testing.T) {
+	client := model.NewClient(model.Config{Provider: "openai", Model: "qwen3", APIKey: "test-key"}, model.WithHTTPClient(&http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if got, want := r.URL.String(), "https://api.openai.com/v1/chat/completions"; got != want {
+			t.Errorf("URL = %q, want %q", got, want)
+		}
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"choices":[]}`)), Header: make(http.Header)}, nil
+	})}))
+	if _, err := client.Generate(context.Background(), &model.GenerateRequest{Prompt: "test"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestClient_OpenAIHTTPStatus(t *testing.T) {
+	for _, tc := range []struct {
+		status    int
+		wantError string
+	}{{401, ""}, {403, ""}, {429, ""}, {503, ""}, {500, "upstream failure"}} {
+		t.Run(http.StatusText(tc.status), func(t *testing.T) {
+			client := model.NewClient(model.Config{Provider: "openai", Model: "qwen3", BaseURL: "https://example.test", APIKey: "test-key"}, model.WithHTTPClient(&http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: tc.status, Body: io.NopCloser(strings.NewReader("upstream failure")), Header: make(http.Header)}, nil
+			})}))
+			resp, err := client.Generate(context.Background(), &model.GenerateRequest{Prompt: "test"})
+			if tc.wantError != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.wantError) {
+					t.Fatalf("error = %v, want containing %q", err, tc.wantError)
+				}
+				return
+			}
+			if err != nil || resp == nil || resp.Content == "" {
+				t.Fatalf("expected fallback response, got response %v, error %v", resp, err)
+			}
+		})
+	}
+}
+
+func TestClient_OpenAIFallbacks(t *testing.T) {
+	t.Run("transport error", func(t *testing.T) {
+		client := model.NewClient(model.Config{Provider: "openai", Model: "qwen3", BaseURL: "https://example.test", APIKey: "test-key"}, model.WithHTTPClient(&http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) { return nil, errors.New("network down") })}))
+		resp, err := client.Generate(context.Background(), &model.GenerateRequest{Prompt: "test"})
+		if err != nil || resp == nil || resp.Content == "" {
+			t.Fatalf("expected fallback response, got response %v, error %v", resp, err)
+		}
+	})
+	t.Run("empty API key", func(t *testing.T) {
+		client := model.NewClient(model.Config{Provider: "openai", Model: "qwen3", BaseURL: "https://example.test"}, model.WithHTTPClient(&http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) { t.Fatal("unexpected HTTP request"); return nil, nil })}))
+		resp, err := client.Generate(context.Background(), &model.GenerateRequest{Prompt: "test"})
+		if err != nil || resp == nil || resp.Content == "" {
+			t.Fatalf("expected fallback response, got response %v, error %v", resp, err)
+		}
+	})
 }
 
 func TestClient_DefaultModelSecretResolution(t *testing.T) {
