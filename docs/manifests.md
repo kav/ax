@@ -108,6 +108,28 @@ spec:
     key: GEMINI_API_KEY
 ```
 
+For Anthropic models, store the key the same way and set `provider: anthropic`.
+
+```bash
+kubectl create secret generic anthropic-api-secret --from-literal=ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+```yaml
+apiVersion: ax.io/v1alpha1
+kind: Model
+metadata:
+  name: claude-model
+  atespace: default
+spec:
+  provider: anthropic
+  model: claude-opus-5
+  secretKey:
+    name: anthropic-api-secret
+    key: ANTHROPIC_API_KEY
+  parameters:
+    maxTokens: 16000
+```
+
 For OpenAI models, create a Secret containing `OPENAI_API_KEY` and set `provider: openai`. If `baseUrl` is omitted, AX uses OpenAI's public API root (`https://api.openai.com/v1`).
 
 ```bash
@@ -129,25 +151,23 @@ spec:
     key: OPENAI_API_KEY
 ```
 
-OpenAI-compatible services can also be used when their endpoint implements the OpenAI Chat Completions API and accepts Bearer authentication. For Synthetic Labs, compatibility depends on the specific model endpoint. Replace the illustrative `baseUrl` below with your Synthetic endpoint.
+OpenAI-compatible services can use `provider: openai` when their endpoint implements the OpenAI Chat Completions API and accepts Bearer authentication. Replace the illustrative `baseUrl` below with the compatible service's API root.
 
 ```bash
-kubectl create secret generic synthetic-api-secret --from-literal=OPENAI_API_KEY="$OPENAI_API_KEY"
+kubectl create secret generic openai-compatible-api-secret --from-literal=OPENAI_API_KEY="$OPENAI_API_KEY"
 ```
 
 ```yaml
 apiVersion: ax.io/v1alpha1
 kind: Model
 metadata:
-  name: synthetic-model
+  name: openai-compatible-model
   atespace: default
 spec:
   provider: openai
   model: qwen3
   baseUrl: https://models.example/v1
   secretKey:
-    name: synthetic-api-secret
+    name: openai-compatible-api-secret
     key: OPENAI_API_KEY
 ```
-
-Anthropic is not implemented in this release.

@@ -332,14 +332,14 @@ func TestModel_BaseURLYAMLRoundTrip(t *testing.T) {
 apiVersion: ax.io/v1alpha1
 kind: Model
 metadata:
-  name: synthetic-model
+  name: openai-compatible-model
   atespace: default
 spec:
   provider: openai
   model: qwen3
   baseUrl: https://models.example/v1
   secretKey:
-    name: synthetic-api-secret
+    name: openai-compatible-api-secret
     key: OPENAI_API_KEY
 `
 	var model v1alpha1.Model
