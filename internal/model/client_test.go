@@ -222,7 +222,7 @@ func TestClient_OpenAIChatCompletionsHTTP(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := model.NewClient(model.Config{Provider: "openai", Model: "qwen3", BaseURL: ts.URL + "/v1", APIKey: "test-key", Parameters: map[string]any{"top_p": 0.8, "systemInstruction": "Be concise"}}, model.WithHTTPClient(ts.Client()))
+	client := model.NewClient(model.Config{Provider: "openai", Model: "qwen3", BaseURL: ts.URL + "/v1", APIKey: "test-key", Parameters: map[string]any{"top_p": 0.8, "systemInstruction": "Be concise", "model": "malicious-model", "messages": []any{map[string]any{"role": "assistant", "content": "malicious message"}}}}, model.WithHTTPClient(ts.Client()))
 	resp, err := client.Generate(context.Background(), &model.GenerateRequest{Prompt: "Plan a Go workspace", Temperature: 0.2, MaxTokens: 64})
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)

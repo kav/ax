@@ -518,7 +518,7 @@ func (c *Client) generateOpenAI(ctx context.Context, req *GenerateRequest) (*Gen
 	messages = append(messages, map[string]string{"role": "user", "content": req.Prompt})
 	payload := map[string]any{"model": req.Model, "messages": messages}
 	for k, v := range c.cfg.Parameters {
-		if k != systemInstructionParam {
+		if k != systemInstructionParam && k != "model" && k != "messages" {
 			payload[k] = v
 		}
 	}
