@@ -129,7 +129,7 @@ spec:
     key: OPENAI_API_KEY
 ```
 
-OpenAI-compatible services can also be used when their endpoint implements the OpenAI Chat Completions API and accepts Bearer authentication. Compatibility varies by model and service; this does not imply that every Synthetic model or API is compatible. Replace the illustrative `baseUrl` below with your Synthetic endpoint.
+OpenAI-compatible services can also be used when their endpoint implements the OpenAI Chat Completions API and accepts Bearer authentication. For Synthetic Labs, compatibility depends on the specific model endpoint. Replace the illustrative `baseUrl` below with your Synthetic endpoint.
 
 ```bash
 kubectl create secret generic synthetic-api-secret --from-literal=OPENAI_API_KEY="$OPENAI_API_KEY"
